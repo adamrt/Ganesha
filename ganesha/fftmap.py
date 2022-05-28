@@ -1,4 +1,4 @@
-from struct import pack, unpack
+from struct import unpack
 
 from ganesha.gns import GNS
 from ganesha.resource import Resources
@@ -191,10 +191,6 @@ class Ambient_Light:
     def from_data(self, data):
         self.color = unpack("3B", data)
 
-    def to_data(self, amb_light):
-        color = amb_light.color
-        return pack("3B", *color)
-
 
 class Directional_Light:
     def __init__(self):
@@ -214,9 +210,6 @@ class Background:
     def from_data(self, color_data):
         self.color1 = unpack("3B", color_data[0:3])
         self.color2 = unpack("3B", color_data[3:6])
-
-    def to_data(self, background):
-        return pack("6B", *(background.color1 + background.color2))
 
 
 class Tile:
@@ -251,21 +244,6 @@ class Tile:
         self.cant_cursor = (val7 >> 0) & 0x1
         self.unknown5 = unpack("B", tile_data[7:8])[0]
 
-    def to_data(self, tile):
-        tile_data = ""
-        val1 = (tile.unknown1 << 6) + (tile.surface_type << 0)
-        tile_data += pack("B", val1)
-        tile_data += pack("B", tile.unknown2)
-        tile_data += pack("B", tile.height)
-        val4 = (tile.depth << 5) + (tile.slope_height << 0)
-        tile_data += pack("B", val4)
-        tile_data += pack("B", tile.slope_type)
-        tile_data += pack("B", tile.unknown3)
-        val7 = (tile.unknown4 << 2) + (tile.cant_walk << 1) + (tile.cant_cursor << 0)
-        tile_data += pack("B", val7)
-        tile_data += pack("B", tile.unknown5)
-        return tile_data
-
 
 class Terrain:
     def __init__(self):
@@ -289,20 +267,6 @@ class Terrain:
             # Skip to second level of terrain data
             offset = 2 + 8 * 256
 
-    def to_data(self, terrain):
-        max_x = len(terrain.tiles[0][0])
-        max_z = len(terrain.tiles[0])
-        terrain_data = pack("BB", max_x, max_z)
-        for level in terrain.tiles:
-            for row in level:
-                for tile in row:
-                    tile_obj = Tile()
-                    tile_data = tile_obj.to_data(tile)
-                    terrain_data += tile_data
-            # Skip to second level of terrain data
-            terrain_data += "\x00" * (8 * 256 - 8 * max_x * max_z)
-        return terrain_data
-
 
 class Texture:
     def __init__(self):
@@ -319,16 +283,6 @@ class Texture:
                 row.append(pix1)
                 row.append(pix2)
             self.image.append(row)
-
-    def to_data(self, texture):
-        texture_data = ""
-        for y in range(1024):
-            for x in range(128):
-                pix1 = texture[y][x * 2]
-                pix2 = texture[y][x * 2 + 1]
-                pair = pack("B", (pix1 << 0) + (pix2 << 4))
-                texture_data += pair
-        return texture_data
 
 
 class Map:
@@ -352,10 +306,6 @@ class Map:
     def read(self):
         self.texture.read(self.texture_files)
         self.resources.read(self.resource_files)
-
-    def write(self):
-        # self.texture.write()
-        self.resources.write()
 
     def get_texture(self):
         texture = Texture()
@@ -393,7 +343,7 @@ class Map:
         size_x = abs(self.extents[1][0] - self.extents[0][0])
         size_y = abs(self.extents[1][1] - self.extents[0][1])
         size_z = abs(self.extents[1][2] - self.extents[0][2])
-        self.hypotenuse = sqrt(size_x ** 2 + size_z ** 2)
+        self.hypotenuse = sqrt(size_x**2 + size_z**2)
 
     def get_tex_3gon(self, toc_index=0x40):
         points = self.resources.get_tex_3gon_xyz(toc_index)
@@ -494,35 +444,3 @@ class Map:
             palette = Palette()
             palette.from_data(palette_data)
             yield palette
-
-    def put_texture(self, texture):
-        tex = Texture()
-        texture_data = tex.to_data(texture)
-        self.texture.write(texture_data)
-
-    def put_polygons(self, polygons):
-        self.resources.put_polygons(polygons)
-
-    def put_color_palettes(self, color_palettes):
-        self.resources.put_palettes(color_palettes, 0x44)
-
-    def put_dir_lights(self, dir_lights):
-        self.resources.put_dir_lights(dir_lights)
-
-    def put_amb_light(self, amb_light):
-        light = Ambient_Light()
-        light_data = light.to_data(amb_light)
-        self.resources.put_amb_light_rgb(light_data)
-
-    def put_background(self, background):
-        bg = Background()
-        bg_data = bg.to_data(background)
-        self.resources.put_background(bg_data)
-
-    def put_terrain(self, terrain):
-        terr = Terrain()
-        terrain_data = terr.to_data(terrain)
-        self.resources.put_terrain(terrain_data)
-
-    def put_visible_angles(self, polygons):
-        self.resources.put_visible_angles(polygons)

@@ -10,8 +10,3 @@ class Texture:
             with open(path, "rb") as file:
                 self.data = file.read()
             break
-
-    def write(self, data):
-        with open(self.file_path, "wb") as file:
-            print("Writing", self.file_path)
-            file.write(data)
