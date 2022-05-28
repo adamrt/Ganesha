@@ -26,14 +26,7 @@ def coords_to_panda(x, y, z):
     return (x, z, -y)
 
 
-def uv_to_panda(polygon, u, v):
-    page = polygon.texture_page
-    u = u / 256.0
-    v = 1.0 - (page + v / 256.0) / 4.0
-    return (u, v)
-
-
-def uv_to_panda2(polygon, pal, u, v):
+def uv_to_panda(polygon, pal, u, v):
     page = polygon.texture_page
     u = (u + pal) / (256.0 * 17)
     v = 1.0 - (page + v / 256.0) / 4.0
@@ -289,14 +282,14 @@ class Polygon:
         if polygon.A.texcoord:
             pal = (polygon.texture_palette + 1) * 256
 
-            texcoord_A = uv_to_panda2(polygon, pal, *polygon.A.texcoord.coords)
-            texcoord_B = uv_to_panda2(polygon, pal, *polygon.B.texcoord.coords)
-            texcoord_C = uv_to_panda2(polygon, pal, *polygon.C.texcoord.coords)
+            texcoord_A = uv_to_panda(polygon, pal, *polygon.A.texcoord.coords)
+            texcoord_B = uv_to_panda(polygon, pal, *polygon.B.texcoord.coords)
+            texcoord_C = uv_to_panda(polygon, pal, *polygon.C.texcoord.coords)
             texcoord.addData2f(*texcoord_A)
             texcoord.addData2f(*texcoord_B)
             texcoord.addData2f(*texcoord_C)
             if hasattr(polygon, "D"):
-                texcoord_D = uv_to_panda2(polygon, pal, *polygon.D.texcoord.coords)
+                texcoord_D = uv_to_panda(polygon, pal, *polygon.D.texcoord.coords)
                 texcoord.addData2f(*texcoord_D)
         primitive.addNextVertices(4)
         primitive.closePrimitive()
