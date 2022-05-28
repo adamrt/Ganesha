@@ -1,5 +1,3 @@
-import math
-
 import wx
 from direct.fsm.FSM import FSM
 from direct.showbase.DirectObject import DirectObject
@@ -555,7 +553,7 @@ class MapViewer(DirectObject):
         if hovered_object:
             if self.multiSelect:
                 # If the object is not already selected
-                if not hovered_object in self.selected_objects:
+                if hovered_object not in self.selected_objects:
                     # If the list is empty, or if the types in the list match the type selected (so we don't mix Tile / Poly)
                     if len(self.selected_objects) == 0 or type(
                         self.selected_objects[0]

@@ -316,7 +316,6 @@ class Resources:
     def get_terrain(self, toc_offset=0x68):
         resource = self.chunks[toc_offset // 4]
         data = resource.chunks[toc_offset // 4]
-        offset = 0
         return data
 
     def get_gray_palettes(self, toc_offset=0x7C):

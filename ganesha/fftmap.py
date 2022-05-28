@@ -341,7 +341,8 @@ class Map:
         from math import sqrt
 
         size_x = abs(self.extents[1][0] - self.extents[0][0])
-        size_y = abs(self.extents[1][1] - self.extents[0][1])
+        # Defined but currently unused
+        # size_y = abs(self.extents[1][1] - self.extents[0][1])
         size_z = abs(self.extents[1][2] - self.extents[0][2])
         self.hypotenuse = sqrt(size_x**2 + size_z**2)
 

@@ -558,7 +558,8 @@ class Tile:
         vertex = GeomVertexWriter(vdata, "vertex")
         color = GeomVertexWriter(vdata, "color")
         primitive = GeomTristrips(Geom.UHStatic)
-        y = self.height * 12 + self.depth * 12 + 1
+        # Defined but currently unused
+        # y = self.height * 12 + self.depth * 12 + 1
         try:
             (slope, rotation) = slope_types[self.slope_type]
         except KeyError:

@@ -1509,10 +1509,13 @@ class GNS:
             time = (temp1 >> 7) & 0x1
             weather = (temp1 >> 4) & 0x7
             self.file.seek(2, 1)
-            resource_lba = struct.unpack("<I", self.file.read(4))[0]
+
+            # Temporarily unused until we start reading the ISO directly
+            _ = struct.unpack("<I", self.file.read(4))[0]  # resource_lba
+            _ = struct.unpack("<I", self.file.read(4))[0]  # resource_size
             resource_filename = gnslines[(map_number, line_number)]
             resource_file_path = os.path.join(map_dir, resource_filename)
-            resource_size = struct.unpack("<I", self.file.read(4))[0]
+
             situations[(index1, arrange, time, weather)] = True
             if resource_type == RESOURCE_TEXTURE:
                 self.items[(index1, arrange, time, weather, "tex")] = resource_file_path
