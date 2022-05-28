@@ -1,3 +1,5 @@
+from math import sqrt
+
 from struct import unpack
 
 from ganesha.gns import GNS
@@ -9,16 +11,10 @@ class PointXYZ:
     def __init__(self, data):
         self.coords = (self.X, self.Y, self.Z) = unpack("<3h", data)
 
-    def set_coords(self, x, y, z):
-        self.coords = (self.X, self.Y, self.Z) = x, y, z
-
 
 class PointUV:
     def __init__(self, data):
         self.coords = (self.U, self.V) = unpack("<2B", data)
-
-    def set_coords(self, u, v):
-        self.coords = (self.U, self.V) = u, v
 
 
 class VectorXYZ:
@@ -26,9 +22,6 @@ class VectorXYZ:
         self.coords = (self.X, self.Y, self.Z) = [
             x / 4096.0 for x in unpack("<3h", data)
         ]
-
-    def set_coords(self, x, y, z):
-        self.coords = (self.X, self.Y, self.Z) = x, y, z
 
 
 class Vertex:
@@ -269,11 +262,7 @@ class Map:
         self.get_hypotenuse()
 
     def get_hypotenuse(self):
-        from math import sqrt
-
         size_x = abs(self.extents[1][0] - self.extents[0][0])
-        # Defined but currently unused
-        # size_y = abs(self.extents[1][1] - self.extents[0][1])
         size_z = abs(self.extents[1][2] - self.extents[0][2])
         self.hypotenuse = sqrt(size_x**2 + size_z**2)
 
@@ -289,10 +278,9 @@ class Map:
         for point, visangle, normal, texcoord, terrain_coord in zip(
             points, visangles, normals, texcoords, terrain_coords
         ):
-            polygon = Triangle(
+            yield Triangle(
                 point, visangle, normal, texcoord, terrain_coords=terrain_coord
             )
-            yield polygon
 
     def get_tex_4gon(self, toc_index=0x40):
         points = self.resources.get_tex_4gon_xyz(toc_index)
@@ -306,10 +294,7 @@ class Map:
         for point, visangle, normal, texcoord, terrain_coord in zip(
             points, visangles, normals, texcoords, terrain_coords
         ):
-            polygon = Quad(
-                point, visangle, normal, texcoord, terrain_coords=terrain_coord
-            )
-            yield polygon
+            yield Quad(point, visangle, normal, texcoord, terrain_coords=terrain_coord)
 
     def get_untex_3gon(self, toc_index=0x40):
         points = self.resources.get_untex_3gon_xyz(toc_index)
@@ -334,35 +319,24 @@ class Map:
             yield polygon
 
     def get_color_palettes(self):
-        palettes = self.resources.get_color_palettes()
-        for palette_data in palettes:
-            palette = Palette(palette_data)
-            yield palette
+        for data in self.resources.get_color_palettes():
+            yield Palette(data)
 
     def get_dir_lights(self):
         colors = self.resources.get_dir_light_rgb()
         normals = self.resources.get_dir_light_norm()
         for color, normal in zip(colors, normals):
-            light = Directional_Light(color, normal)
-            yield light
+            yield Directional_Light(color, normal)
 
     def get_amb_light(self):
-        color = self.resources.get_amb_light_rgb()
-        light = Ambient_Light(color)
-        return light
+        return Ambient_Light(self.resources.get_amb_light_rgb())
 
     def get_background(self):
-        background_data = self.resources.get_background()
-        background = Background(background_data)
-        return background
+        return Background(self.resources.get_background())
 
     def get_terrain(self):
-        terrain_data = self.resources.get_terrain()
-        terrain = Terrain(terrain_data)
-        return terrain
+        return Terrain(self.resources.get_terrain())
 
     def get_gray_palettes(self):
-        palettes = self.resources.get_gray_palettes()
-        for palette_data in palettes:
-            palette = Palette(palette_data)
-            yield palette
+        for data in self.resources.get_gray_palettes():
+            yield Palette(data)
