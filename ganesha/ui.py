@@ -222,39 +222,6 @@ class ViewerState(FSM):
         self.app.mouse.task = None
 
 
-class SettingsWindow(wx.Frame):
-    def __init__(self, parent, ID, title):
-        self.app = parent
-        wx.Frame.__init__(
-            self, parent.wx_win, ID, title, wx.DefaultPosition, wx.DefaultSize
-        )
-        self.Bind(wx.EVT_CLOSE, self.on_close)
-        panel = wx.Panel(self, wx.ID_ANY)
-        sizer_sections = wx.BoxSizer(wx.VERTICAL)
-        text = (
-            "[: Previous state\t]: Next State\n\n"
-            + "n: Next map\t\tt: Next terrain mode\n\n"
-            + "s: Save\t\t\to: Output texture\n\n"
-            + "Alt-Right Click / Mouse-Wheel Click + Drag: Pan Camera\n\n"
-            + "CTRL + A: Select all Polygons / Tiles depending on view.\nCTRL + A repeatedly: In terrain view, cycle through multiple levels.\n\n"
-            + "Holding CTRL: Allows selection of multiple polygons\non which you can perform the following on:\n\n"
-            + "q: Decrease Y (12)\te: Increase Y (12)\n\n"
-            + "q: Decrease Tile height (1) \te: Increase Tile height (1)\n\n"
-            + "Up: Increase X (28)\tDown: Decrease X (28)\n\n"
-            + "Left: Increase Z (28)\tRight: Decrease Z (28)\n\n"
-        )
-        text_label = wx.StaticText(panel, wx.ID_ANY, text)
-        textArea = wx.BoxSizer(wx.HORIZONTAL)
-        textArea.Add(text_label)
-        sizer_sections.Add(textArea, flag=wx.ALL, border=10)
-        panel.SetSizer(sizer_sections)
-        sizer_sections.SetSizeHints(panel)
-        sizer_sections.SetSizeHints(self)
-
-    def on_close(self, event):
-        self.Show(False)
-
-
 # This defines what the mouse clicks do
 class MapViewer(DirectObject):
     def __init__(self, *args, **kwargs):
@@ -526,3 +493,36 @@ class MapViewer(DirectObject):
         self.terrain_mode %= len(terrain_modes)
         self.world.set_terrain_alpha(self.terrain_mode)
         self.set_full_light(self.full_light_enabled)
+
+
+class SettingsWindow(wx.Frame):
+    def __init__(self, parent, ID, title):
+        self.app = parent
+        wx.Frame.__init__(
+            self, parent.wx_win, ID, title, wx.DefaultPosition, wx.DefaultSize
+        )
+        self.Bind(wx.EVT_CLOSE, self.on_close)
+        panel = wx.Panel(self, wx.ID_ANY)
+        sizer_sections = wx.BoxSizer(wx.VERTICAL)
+        text = (
+            "[: Previous state\t]: Next State\n\n"
+            + "n: Next map\t\tt: Next terrain mode\n\n"
+            + "s: Save\t\t\to: Output texture\n\n"
+            + "Alt-Right Click / Mouse-Wheel Click + Drag: Pan Camera\n\n"
+            + "CTRL + A: Select all Polygons / Tiles depending on view.\nCTRL + A repeatedly: In terrain view, cycle through multiple levels.\n\n"
+            + "Holding CTRL: Allows selection of multiple polygons\non which you can perform the following on:\n\n"
+            + "q: Decrease Y (12)\te: Increase Y (12)\n\n"
+            + "q: Decrease Tile height (1) \te: Increase Tile height (1)\n\n"
+            + "Up: Increase X (28)\tDown: Decrease X (28)\n\n"
+            + "Left: Increase Z (28)\tRight: Decrease Z (28)\n\n"
+        )
+        text_label = wx.StaticText(panel, wx.ID_ANY, text)
+        textArea = wx.BoxSizer(wx.HORIZONTAL)
+        textArea.Add(text_label)
+        sizer_sections.Add(textArea, flag=wx.ALL, border=10)
+        panel.SetSizer(sizer_sections)
+        sizer_sections.SetSizeHints(panel)
+        sizer_sections.SetSizeHints(self)
+
+    def on_close(self, event):
+        self.Show(False)
