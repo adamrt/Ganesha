@@ -20,7 +20,7 @@ from ganesha.constants import (
     TERRAIN_ONLY,
     terrain_modes,
 )
-from ganesha.world import Polygon, World
+from ganesha.world import World
 
 slope_types = [
     (0x00, "Flat 0"),
@@ -42,54 +42,38 @@ slope_types = [
 class ViewerMouse(DirectObject):
     def __init__(self, app):
         self.app = app
+        self.app.base.taskMgr.add(self.position_task, "mouse_task")
 
-        self.init_collide()
         self.has_mouse = None
-        self.prev_pos = None
         self.pos = None
+        self.prev_pos = None
         self.drag_start = None
         self.hovered_object = None
-        self.button2 = False
-        self.altButton2 = False
-        self.mouseTask = self.app.base.taskMgr.add(self.mouse_task, "mouseTask")
+
         self.task = None
+
+        self.button1 = False
+        self.button3 = False
+
         self.accept("mouse1", self.mouse1)
-        self.accept("control-mouse1", self.mouse1)
         self.accept("mouse1-up", self.mouse1_up)
-        self.accept("mouse2", self.startPan)
-        self.accept("mouse2-up", self.stopCamera)
-        self.accept("mouse3", self.rotateCamera)
-        self.accept("alt-mouse3", self.startPan)
-        self.accept("alt-up", self.endPan)
-        self.accept("mouse3-up", self.stopCamera)
+        self.accept("mouse3", self.mouse3)
+        self.accept("mouse3-up", self.mouse3_up)
         self.accept("wheel_up", self.wheel_up)
         self.accept("wheel_down", self.wheel_down)
 
-    def init_collide(self):
+        # Collision Init
         self.cTrav = CollisionTraverser("MousePointer")
         self.cQueue = CollisionHandlerQueue()
+        self.cRay = CollisionRay()
         self.cNode = CollisionNode("MousePointer")
         self.cNodePath = self.app.base.camera.attachNewNode(self.cNode)
+
         self.cNode.setFromCollideMask(GeomNode.getDefaultCollideMask())
-        self.cRay = CollisionRay()
         self.cNode.addSolid(self.cRay)
         self.cTrav.addCollider(self.cNodePath, self.cQueue)
 
-    def find_object(self):
-        if self.app.world.node_path:
-            self.cRay.setFromLens(
-                self.app.base.camNode, self.pos.getX(), self.pos.getY()
-            )
-            if self.app.terrain_mode in [MESH_ONLY, MOSTLY_MESH]:
-                self.cTrav.traverse(self.app.world.node_path_mesh)
-            elif self.app.terrain_mode in [MOSTLY_TERRAIN, TERRAIN_ONLY]:
-                self.cTrav.traverse(self.app.world.node_path_terrain)
-            if self.cQueue.getNumEntries() > 0:
-                self.cQueue.sortEntries()
-                return self.cQueue.getEntry(0).getIntoNodePath()
-        return None
-
-    def mouse_task(self, task):
+    def position_task(self, task):
         action = task.cont
         self.has_mouse = self.app.base.mouseWatcherNode.hasMouse()
         if self.has_mouse:
@@ -106,14 +90,15 @@ class ViewerMouse(DirectObject):
             self.prev_pos = Point2(self.pos.getX(), self.pos.getY())
         return action
 
-    def hover(self, task):
+    def movement_task(self, task):
         if self.hovered_object:
             self.hovered_object.unhover()
             self.hovered_object = None
-        if self.button2:
+        if self.button1:
             self.camera_drag()
-        elif self.altButton2:
+        elif self.button3:
             self.camera_pan()
+
         hovered_node_path = self.find_object()
         if hovered_node_path:
             polygon = hovered_node_path.findNetTag("polygon_i")
@@ -131,21 +116,24 @@ class ViewerMouse(DirectObject):
         return task.cont
 
     def mouse1(self):
-        if self.app.base.mouseWatcherNode.hasMouse():
-            self.app.state.request("mouse1")
+        self.button1 = True
+        self.app.state.request("mouse1")
 
     def mouse1_up(self):
+        self.button1 = False
         self.app.state.request("mouse1-up")
+
+    def mouse3(self):
+        self.button3 = True
+        self.app.state.request("mouse3")
+
+    def mouse3_up(self):
+        self.button3 = False
+        self.app.state.request("mouse3-up")
 
     def camera_pan(self):
         if self.delta:
             self.app.world.set_camera_pos(self.delta.getX(), self.delta.getY())
-
-    def startPan(self):
-        self.altButton2 = True
-
-    def endPan(self):
-        self.altButton2 = False
 
     def camera_drag(self):
         if self.delta:
@@ -158,15 +146,6 @@ class ViewerMouse(DirectObject):
             new_heading = 270 + new_heading
             new_pitch = -new_pitch
             self.app.world.set_camera_angle(new_heading, new_pitch)
-
-    def rotateCamera(self):
-        self.button2 = True
-        self.app.state.request("mouse2")
-
-    def stopCamera(self):
-        self.button2 = False
-        self.app.state.request("mouse2-up")
-        self.endPan()  # Also stops panning, since mouse3 can do both rotating and panning
 
     def wheel_up(self):
         if self.app.base.mouseWatcherNode.hasMouse():
@@ -184,6 +163,19 @@ class ViewerMouse(DirectObject):
             scale = self.app.world.background.node_path.getScale()
             self.app.world.background.node_path.setScale(scale * 1.2)
 
+    def find_object(self):
+        if self.app.world.node_path:
+            self.cRay.setFromLens(
+                self.app.base.camNode, self.pos.getX(), self.pos.getY()
+            )
+            if self.app.terrain_mode in [MESH_ONLY, MOSTLY_MESH]:
+                self.cTrav.traverse(self.app.world.node_path_mesh)
+            elif self.app.terrain_mode in [MOSTLY_TERRAIN, TERRAIN_ONLY]:
+                self.cTrav.traverse(self.app.world.node_path_terrain)
+            if self.cQueue.getNumEntries() > 0:
+                self.cQueue.sortEntries()
+                return self.cQueue.getEntry(0).getIntoNodePath()
+
 
 class ViewerState(FSM):
     def __init__(self, app, name):
@@ -191,35 +183,21 @@ class ViewerState(FSM):
         self.app = app
 
     def enterSpin(self):
-        # print 'enterSpin'
+        self.app.mouse.task = self.app.mouse.movement_task
         self.app.base.taskMgr.add(self.app.world.spin_camera, "spin_camera")
-        self.app.mouse.task = self.app.mouse.hover
 
     def filterSpin(self, request, args):
-        # print 'filterSpin'
-        if request == "mouse2":
+        if request:
             return "FreeRotate"
-        if request == "mouse1":
-            self.app.select(self.app.mouse.hovered_object)
-        return None
 
     def exitSpin(self):
-        # print 'exitSpin'
         self.app.base.taskMgr.remove("spin_camera")
-        self.app.mouse.task = None
 
     def enterFreeRotate(self):
-        # print 'enterFreeRotate'
-        self.app.mouse.task = self.app.mouse.hover
-
-    def filterFreeRotate(self, request, args):
-        if request == "mouse1" or request == "control-mouse1":
-            self.app.select(self.app.mouse.hovered_object)
-        return None
+        self.app.mouse.task = self.app.mouse.movement_task
 
     def exitFreeRotate(self):
-        # print 'exitFreeRotate'
-        self.app.mouse.task = None
+        pass
 
 
 # This defines what the mouse clicks do
@@ -301,7 +279,6 @@ class MapViewer(DirectObject):
         if dlg.ShowModal() == wx.ID_OK:
             return dlg.GetPath()
         dlg.Destroy()
-        return None
 
     def set_full_light(self, light_on):
         self.full_light_enabled = light_on
