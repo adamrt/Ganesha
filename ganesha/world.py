@@ -485,7 +485,7 @@ class Background:
         vertex = GeomVertexWriter(vdata, "vertex")
         color = GeomVertexWriter(vdata, "color")
         primitive = GeomTristrips(Geom.UHStatic)
-        film_size = base.cam.node().getLens().getFilmSize()
+        film_size = self.parent.parent.base.cam.node().getLens().getFilmSize()
         x = film_size.getX() / 2.0
         z = x * 0.75
         vertex.addData3f(-x, 10000, z)
@@ -502,7 +502,7 @@ class Background:
         geom.addPrimitive(primitive)
         node = GeomNode("gnode")
         node.addGeom(geom)
-        self.node_path = base.camera.attachNewNode(node)
+        self.node_path = self.parent.parent.base.camera.attachNewNode(node)
 
 
 class Tile:
@@ -750,7 +750,7 @@ class World:
         self.init_camera()
 
     def read(self):
-        self.node_path = render.attachNewNode("world")
+        self.node_path = self.parent.base.render.attachNewNode("world")
         self.node_path.setTransparency(TransparencyAttrib.MAlpha)
         self.node_path_mesh = self.node_path.attachNewNode("mesh")
         self.node_path_ui = self.node_path.attachNewNode("ui")
@@ -777,7 +777,7 @@ class World:
         lens.setAspectRatio(aspect_ratio)
         lens.setNear(-32768)
         lens.setFar(131072)
-        base.cam.node().setLens(lens)
+        self.parent.base.cam.node().setLens(lens)
 
     def set_center(self):
         size_x = abs(self.map.extents[1][0] - self.map.extents[0][0])
@@ -791,25 +791,31 @@ class World:
         )
 
     def set_camera_zoom(self):
-        base.cam.node().getLens().setFilmSize(self.map.hypotenuse)
+        self.parent.base.cam.node().getLens().setFilmSize(self.map.hypotenuse)
 
     def set_camera_angle(self, azimuth, elevation):
         y = cos(pi * elevation / 180) * self.map.hypotenuse
         z = sin(pi * elevation / 180) * self.map.hypotenuse
         x = cos(pi * azimuth / 180) * y
         y = sin(pi * azimuth / 180) * y
-        base.camera.setPos(self.center_x + x, self.center_y + y, self.center_z + z)
+        self.parent.base.camera.setPos(
+            self.center_x + x, self.center_y + y, self.center_z + z
+        )
 
-        base.camera.lookAt(Point3(self.center_x, self.center_y, self.center_z))
+        self.parent.base.camera.lookAt(
+            Point3(self.center_x, self.center_y, self.center_z)
+        )
 
     def set_camera_pos(self, deltaX, deltaY):
-        oldX = base.camera.getX()
-        oldY = base.camera.getY()
-        oldZ = base.camera.getZ()
-        base.camera.setPos(base.camera, -deltaX * 150, 0, -deltaY * 150)
-        self.center_x += base.camera.getX() - oldX
-        self.center_y += base.camera.getY() - oldY
-        self.center_z += base.camera.getZ() - oldZ
+        oldX = self.parent.base.camera.getX()
+        oldY = self.parent.base.camera.getY()
+        oldZ = self.parent.base.camera.getZ()
+        self.parent.base.camera.setPos(
+            self.parent.base.camera, -deltaX * 150, 0, -deltaY * 150
+        )
+        self.center_x += self.parent.base.camera.getX() - oldX
+        self.center_y += self.parent.base.camera.getY() - oldY
+        self.center_z += self.parent.base.camera.getZ() - oldZ
 
     def spin_camera(self, task):
         azimuth = task.time * 30
