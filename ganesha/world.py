@@ -223,7 +223,7 @@ class Vector:
 
 
 class Polygon:
-    def __init__(self, parent):
+    def __init__(self, parent, polygon):
         self.parent = parent
         self.source = None
         self.terrain_coords = None
@@ -242,10 +242,6 @@ class Polygon:
         self.nC = None
         self.nD = None
 
-    def __del__(self):
-        self.node_path.remove_node()
-
-    def from_data(self, polygon):
         self.source = polygon
         if polygon.terrain_coords:
             tcoords = polygon.terrain_coords
@@ -253,6 +249,9 @@ class Polygon:
         if polygon.A.texcoord:
             self.palette = polygon.texture_palette
         self.init_node_path()
+
+    def __del__(self):
+        self.node_path.remove_node()
 
     def init_node_path(self):
         if self.node_path:
@@ -364,27 +363,22 @@ class Polygon:
 
 
 class Palette:
-    def __init__(self, parent):
+    def __init__(self, parent, data):
         self.parent = parent
-        self.colors = None
-
-    def from_data(self, data):
         self.colors = data
 
 
 class Ambient_Light:
-    def __init__(self, parent):
+    def __init__(self, parent, color):
         self.parent = parent
+        self.color = color
         self.node_path = None
-        self.color = None
+
+        self.init_node_path()
 
     def __del__(self):
         self.parent.node_path_mesh.clearLight(self.node_path)
         self.node_path.remove_node()
-
-    def from_data(self, light_data):
-        self.color = light_data.color
-        self.init_node_path()
 
     def init_node_path(self):
         if self.node_path:
@@ -398,23 +392,20 @@ class Ambient_Light:
 
 
 class Directional_Light:
-    def __init__(self, parent):
+    def __init__(self, parent, light_data):
         self.parent = parent
         self.format = GeomVertexFormat.getV3c4()
         self.node_path = None
         self.node_path_line = None
-        self.color = None
-        self.direction = None
+
+        self.color = light_data.color
+        self.direction = light_data.direction
+        self.init_node_path()
 
     def __del__(self):
         self.parent.node_path_mesh.clearLight(self.node_path)
         self.node_path.remove_node()
         self.node_path_line.remove_node()
-
-    def from_data(self, light_data):
-        self.color = light_data.color
-        self.direction = light_data.direction
-        self.init_node_path()
 
     def init_node_path(self):
         if self.node_path:
@@ -463,20 +454,17 @@ class Directional_Light:
 
 
 class Background:
-    def __init__(self, parent):
+    def __init__(self, parent, background_data):
         self.parent = parent
         self.format = GeomVertexFormat.getV3c4()
         self.node_path = None
-        self.color1 = None
-        self.color2 = None
 
-    def __del__(self):
-        self.node_path.remove_node()
-
-    def from_data(self, background_data):
         self.color1 = background_data.color1
         self.color2 = background_data.color2
         self.init_node_path()
+
+    def __del__(self):
+        self.node_path.remove_node()
 
     def init_node_path(self):
         if self.node_path:
@@ -506,34 +494,14 @@ class Background:
 
 
 class Tile:
-    def __init__(self, parent):
+    def __init__(self, parent, x, y, z, tile_data):
         self.parent = parent
         self.format = GeomVertexFormat.getV3c4()
         self.node_path = None
         self.tile_color = None
-        self.x = None
-        self.y = None
-        self.z = None
-        self.coords = None
-        self.unknown1 = None
-        self.surface_type = None
-        self.unknown2 = None
-        self.height = None
-        self.depth = None
-        self.slope_height = None
-        self.slope_type = None
-        self.unknown3 = None
-        self.unknown4 = None
-        self.cant_walk = None
-        self.cant_cursor = None
-        self.unknown5 = None
         self.is_hovered = False
         self.is_selected = False
 
-    def __del__(self):
-        self.node_path.remove_node()
-
-    def from_data(self, x, y, z, tile_data):
         self.x = x
         self.y = y
         self.z = z
@@ -550,6 +518,9 @@ class Tile:
         self.cant_walk = tile_data.cant_walk
         self.cant_cursor = tile_data.cant_cursor
         self.unknown5 = tile_data.unknown5
+
+    def __del__(self):
+        self.node_path.remove_node()
 
     def init_node_path(self):
         if self.node_path:
@@ -627,15 +598,10 @@ class Tile:
 
 
 class Terrain:
-    def __init__(self, parent):
+    def __init__(self, parent, terrain_data):
         self.parent = parent
         self.node_path = None
-        self.tiles = None
 
-    def __del__(self):
-        self.node_path.remove_node()
-
-    def from_data(self, terrain_data):
         self.tiles = []
         y = 0
         for level_data in terrain_data.tiles:
@@ -643,13 +609,15 @@ class Terrain:
             for z, row_data in enumerate(level_data):
                 row = []
                 for x, tile_data in enumerate(row_data):
-                    tile = Tile(self)
-                    tile.from_data(x, y, z, tile_data)
-                    row.append(tile)
+                    row.append(Tile(self, x, y, z, tile_data))
                 level.append(row)
             self.tiles.append(level)
             y += 1
+
         self.init_node_path()
+
+    def __del__(self):
+        self.node_path.remove_node()
 
     def init_node_path(self):
         if self.node_path:
@@ -663,11 +631,10 @@ class Terrain:
 
 
 class Texture:
-    def __init__(self):
+    def __init__(self, texture_data, palettes):
         self.texture = None
         self.texture2 = None
 
-    def from_data(self, texture_data, palettes):
         tex_pnm = PNMImage(17 * 256, 1024)
         tex_pnm.addAlpha()
 
@@ -766,9 +733,7 @@ class World:
         self.get_background()
         self.get_terrain()
         self.get_gray_palettes()
-        self.full_light = Ambient_Light(self)
-        self.full_light.color = (255, 255, 255)
-        self.full_light.init_node_path()
+        self.full_light = Ambient_Light(self, (255, 255, 255))
         self.set_center()
 
     def init_camera(self, aspect_ratio=4.0 / 3.0):
@@ -846,56 +811,44 @@ class World:
             self.node_path_mesh.clearLight(self.full_light.node_path)
 
     def get_texture(self):
-        texture = Texture()
-        texture.from_data(self.map.get_texture(), self.color_palettes)
-        self.texture = texture
+        self.texture = Texture(self.map.get_texture(), self.color_palettes)
         self.node_path_mesh.setTexture(self.texture.texture)
 
     def get_polygons(self):
         polygons = []
         reset_polygon_id()
         for i, poly_data in enumerate(self.map.get_polygons()):
-            polygon = Polygon(self)
-            polygon.from_data(poly_data)
+            polygon = Polygon(self, poly_data)
             polygon_id = next_polygon_id()
             polygon.node_path.setTag("polygon_i", str(polygon_id))
             polygons.append(polygon)
         self.polygons = polygons
 
     def get_color_palettes(self):
-        palettes = []
-        for palette_data in self.map.get_color_palettes():
-            palette = Palette(self)
-            palette.from_data(palette_data)
-            palettes.append(palette)
-        self.color_palettes = palettes
+        self.color_palettes = [
+            Palette(self, data) for data in self.map.get_color_palettes()
+        ]
 
     def get_dir_lights(self):
         dir_lights = []
         for i, dir_light_data in enumerate(self.map.get_dir_lights()):
-            dir_light = Directional_Light(self)
-            dir_light.from_data(dir_light_data)
+            dir_light = Directional_Light(self, dir_light_data)
             dir_light.init_node_path_line(i)
             dir_lights.append(dir_light)
         self.dir_lights = dir_lights
 
     def get_amb_light(self):
         amb_light_data = self.map.get_amb_light()
-        amb_light = Ambient_Light(self)
-        amb_light.from_data(amb_light_data)
-        self.amb_light = amb_light
+        self.amb_light = Ambient_Light(self, amb_light_data.color)
 
     def get_background(self):
         background_data = self.map.get_background()
-        background = Background(self)
-        background.from_data(background_data)
-        self.background = background
+        self.background = Background(self, background_data)
 
     def get_terrain(self):
         terrain_data = self.map.get_terrain()
-        terrain = Terrain(self)
-        terrain.from_data(terrain_data)
-        # Why is this necessary?
+        terrain = Terrain(self, terrain_data)
+        # FIXME: Why is this necessary?
         if self.terrain:
             self.terrain.__del__()
         self.terrain = terrain
@@ -903,8 +856,7 @@ class World:
     def get_gray_palettes(self):
         palettes = []
         for palette_data in self.map.get_gray_palettes():
-            palette = Palette(self)
-            palette.from_data(palette_data)
+            palette = Palette(self, palette_data)
             palettes.append(palette)
         self.gray_palettes = palettes
 

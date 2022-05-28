@@ -6,13 +6,7 @@ from ganesha.texture import Texture as Texture_File
 
 
 class PointXYZ:
-    def __init__(self):
-        self.X = None
-        self.Y = None
-        self.Z = None
-        self.coords = (self.X, self.Y, self.Z)
-
-    def from_data(self, data):
+    def __init__(self, data):
         self.coords = (self.X, self.Y, self.Z) = unpack("<3h", data)
 
     def set_coords(self, x, y, z):
@@ -20,12 +14,7 @@ class PointXYZ:
 
 
 class PointUV:
-    def __init__(self):
-        self.U = None
-        self.V = None
-        self.coords = (self.U, self.V)
-
-    def from_data(self, data):
+    def __init__(self, data):
         self.coords = (self.U, self.V) = unpack("<2B", data)
 
     def set_coords(self, u, v):
@@ -33,13 +22,7 @@ class PointUV:
 
 
 class VectorXYZ:
-    def __init__(self):
-        self.X = None
-        self.Y = None
-        self.Z = None
-        self.coords = (self.X, self.Y, self.Z)
-
-    def from_data(self, data):
+    def __init__(self, data):
         self.coords = (self.X, self.Y, self.Z) = [
             x / 4096.0 for x in unpack("<3h", data)
         ]
@@ -49,25 +32,22 @@ class VectorXYZ:
 
 
 class Vertex:
-    def __init__(self):
-        self.point = PointXYZ()
-        self.normal = None
-        self.texcoord = None
-
-    def from_data(self, point_data, normal_data=None, texcoord_data=None):
-        self.point.from_data(point_data)
-        if normal_data:
-            self.normal = VectorXYZ()
-            self.normal.from_data(normal_data)
-            self.texcoord = PointUV()
-            self.texcoord.from_data(texcoord_data)
+    def __init__(self, point_data, normal_data=None, texcoord_data=None):
+        self.point = PointXYZ(point_data)
+        self.normal = VectorXYZ(normal_data) if normal_data else None
+        self.texcoord = PointUV(texcoord_data) if texcoord_data else None
 
 
 class Triangle:
-    def __init__(self):
-        self.A = Vertex()
-        self.B = Vertex()
-        self.C = Vertex()
+    def __init__(
+        self,
+        point,
+        visangle,
+        normal=None,
+        texcoord=None,
+        unknown5=None,
+        terrain_coords=None,
+    ):
         self.texture_palette = None
         self.texture_page = None
         self.visible_angles = None
@@ -78,33 +58,24 @@ class Triangle:
         self.unknown4 = None
         self.unknown5 = None
 
-    def from_data(
-        self,
-        point,
-        visangle,
-        normal=None,
-        texcoord=None,
-        unknown5=None,
-        terrain_coords=None,
-    ):
         if normal:
-            self.A.from_data(point[0:6], normal[0:6], texcoord[0:2])
+            self.A = Vertex(point[0:6], normal[0:6], texcoord[0:2])
             self.unknown1 = (unpack("B", texcoord[2:3])[0] >> 4) & 0xF
             self.texture_palette = unpack("B", texcoord[2:3])[0] & 0xF
             self.unknown2 = unpack("B", texcoord[3:4])[0]
-            self.B.from_data(point[6:12], normal[6:12], texcoord[4:6])
+            self.B = Vertex(point[6:12], normal[6:12], texcoord[4:6])
             self.unknown3 = (unpack("B", texcoord[6:7])[0] >> 2) & 0x3F
             self.texture_page = unpack("B", texcoord[6:7])[0] & 0x3
             self.unknown4 = unpack("B", texcoord[7:8])[0]
-            self.C.from_data(point[12:18], normal[12:18], texcoord[8:10])
+            self.C = Vertex(point[12:18], normal[12:18], texcoord[8:10])
             (val1, tx) = unpack("BB", terrain_coords)
             tz = val1 >> 1
             tlvl = val1 & 0x01
             self.terrain_coords = (tx, tz, tlvl)
         else:
-            self.A.from_data(point[0:6])
-            self.B.from_data(point[6:12])
-            self.C.from_data(point[12:18])
+            self.A = Vertex(point[0:6])
+            self.B = Vertex(point[6:12])
+            self.C = Vertex(point[12:18])
             self.unknown5 = unknown5
         vis = unpack("H", visangle)[0]
         self.visible_angles = [(vis & 2 ** (15 - x)) >> (15 - x) for x in range(16)]
@@ -115,11 +86,15 @@ class Triangle:
 
 
 class Quad:
-    def __init__(self):
-        self.A = Vertex()
-        self.B = Vertex()
-        self.C = Vertex()
-        self.D = Vertex()
+    def __init__(
+        self,
+        point,
+        visangle,
+        normal=None,
+        texcoord=None,
+        unknown5=None,
+        terrain_coords=None,
+    ):
         self.texture_palette = None
         self.texture_page = None
         self.visible_angles = None
@@ -130,35 +105,26 @@ class Quad:
         self.unknown4 = None
         self.unknown5 = None
 
-    def from_data(
-        self,
-        point,
-        visangle,
-        normal=None,
-        texcoord=None,
-        unknown5=None,
-        terrain_coords=None,
-    ):
         if normal:
-            self.A.from_data(point[0:6], normal[0:6], texcoord[0:2])
+            self.A = Vertex(point[0:6], normal[0:6], texcoord[0:2])
             self.unknown1 = (unpack("B", texcoord[2:3])[0] >> 4) & 0xF
             self.texture_palette = unpack("B", texcoord[2:3])[0] & 0xF
             self.unknown2 = unpack("B", texcoord[3:4])[0]
-            self.B.from_data(point[6:12], normal[6:12], texcoord[4:6])
+            self.B = Vertex(point[6:12], normal[6:12], texcoord[4:6])
             self.unknown3 = (unpack("B", texcoord[6:7])[0] >> 2) & 0x3F
             self.texture_page = unpack("B", texcoord[6:7])[0] & 0x3
             self.unknown4 = unpack("B", texcoord[7:8])[0]
-            self.C.from_data(point[12:18], normal[12:18], texcoord[8:10])
-            self.D.from_data(point[18:24], normal[18:24], texcoord[10:12])
+            self.C = Vertex(point[12:18], normal[12:18], texcoord[8:10])
+            self.D = Vertex(point[18:24], normal[18:24], texcoord[10:12])
             (val1, tx) = unpack("BB", terrain_coords)
             tz = val1 >> 1
             tlvl = val1 & 0x01
             self.terrain_coords = (tx, tz, tlvl)
         else:
-            self.A.from_data(point[0:6])
-            self.B.from_data(point[6:12])
-            self.C.from_data(point[12:18])
-            self.D.from_data(point[18:24])
+            self.A = Vertex(point[0:6])
+            self.B = Vertex(point[6:12])
+            self.C = Vertex(point[12:18])
+            self.D = Vertex(point[18:24])
             self.unknown5 = unknown5
         vis = unpack("H", visangle)[0]
         self.visible_angles = [(vis & 2 ** (15 - x)) >> (15 - x) for x in range(16)]
@@ -169,10 +135,7 @@ class Quad:
 
 
 class Palette:
-    def __init__(self):
-        self.colors = None
-
-    def from_data(self, data):
+    def __init__(self, data):
         colors = []
         for c in range(16):
             unpacked = unpack("H", data[c * 2 : c * 2 + 2])[0]
@@ -185,49 +148,24 @@ class Palette:
 
 
 class Ambient_Light:
-    def __init__(self):
-        self.color = None
-
-    def from_data(self, data):
+    def __init__(self, data):
         self.color = unpack("3B", data)
 
 
 class Directional_Light:
-    def __init__(self):
-        self.color = None
-        self.direction = VectorXYZ()
-
-    def from_data(self, color_data, direction_data):
+    def __init__(self, color_data, direction_data):
         self.color = unpack("3h", color_data)
-        self.direction.from_data(direction_data)
+        self.direction = VectorXYZ(direction_data)
 
 
 class Background:
-    def __init__(self):
-        self.color1 = None
-        self.color2 = None
-
-    def from_data(self, color_data):
+    def __init__(self, color_data):
         self.color1 = unpack("3B", color_data[0:3])
         self.color2 = unpack("3B", color_data[3:6])
 
 
 class Tile:
-    def __init__(self):
-        self.unknown1 = None
-        self.surface_type = None
-        self.unknown2 = None
-        self.height = None
-        self.depth = None
-        self.slope_height = None
-        self.slope_type = None
-        self.unknown3 = None
-        self.unknown4 = None
-        self.cant_walk = None
-        self.cant_cursor = None
-        self.unknown5 = None
-
-    def from_data(self, tile_data):
+    def __init__(self, tile_data):
         val1 = unpack("B", tile_data[0:1])[0]
         self.unknown1 = (val1 >> 6) & 0x3
         self.surface_type = (val1 >> 0) & 0x3F
@@ -246,10 +184,8 @@ class Tile:
 
 
 class Terrain:
-    def __init__(self):
+    def __init__(self, terrain_data):
         self.tiles = []
-
-    def from_data(self, terrain_data):
         (x_count, z_count) = unpack("2B", terrain_data[0:2])
         offset = 2
         for y in range(2):
@@ -258,8 +194,7 @@ class Terrain:
                 row = []
                 for x in range(x_count):
                     tile_data = terrain_data[offset : offset + 8]
-                    tile = Tile()
-                    tile.from_data(tile_data)
+                    tile = Tile(tile_data)
                     row.append(tile)
                     offset += 8
                 level.append(row)
@@ -269,10 +204,8 @@ class Terrain:
 
 
 class Texture:
-    def __init__(self):
+    def __init__(self, data):
         self.image = []
-
-    def from_data(self, data):
         for y in range(1024):
             row = []
             for x in range(128):
@@ -308,9 +241,7 @@ class Map:
         self.resources.read(self.resource_files)
 
     def get_texture(self):
-        texture = Texture()
-        texture.from_data(self.texture.data)
-        return texture
+        return Texture(self.texture.data)
 
     def get_polygons(self):
         minx = 32767
@@ -358,8 +289,7 @@ class Map:
         for point, visangle, normal, texcoord, terrain_coord in zip(
             points, visangles, normals, texcoords, terrain_coords
         ):
-            polygon = Triangle()
-            polygon.from_data(
+            polygon = Triangle(
                 point, visangle, normal, texcoord, terrain_coords=terrain_coord
             )
             yield polygon
@@ -376,8 +306,7 @@ class Map:
         for point, visangle, normal, texcoord, terrain_coord in zip(
             points, visangles, normals, texcoords, terrain_coords
         ):
-            polygon = Quad()
-            polygon.from_data(
+            polygon = Quad(
                 point, visangle, normal, texcoord, terrain_coords=terrain_coord
             )
             yield polygon
@@ -390,8 +319,7 @@ class Map:
             visangles = ["\x00\x00"] * 64
         unknowns = self.resources.get_untex_3gon_unknown(toc_index)
         for point, visangle, unknown in zip(points, visangles, unknowns):
-            polygon = Triangle()
-            polygon.from_data(point, visangle, unknown5=unknown)
+            polygon = Triangle(point, visangle, unknown5=unknown)
             yield polygon
 
     def get_untex_4gon(self, toc_index=0x40):
@@ -402,46 +330,39 @@ class Map:
             visangles = ["\x00\x00"] * 256
         unknowns = self.resources.get_untex_4gon_unknown(toc_index)
         for point, visangle, unknown in zip(points, visangles, unknowns):
-            polygon = Quad()
-            polygon.from_data(point, visangle, unknown5=unknown)
+            polygon = Quad(point, visangle, unknown5=unknown)
             yield polygon
 
     def get_color_palettes(self):
         palettes = self.resources.get_color_palettes()
         for palette_data in palettes:
-            palette = Palette()
-            palette.from_data(palette_data)
+            palette = Palette(palette_data)
             yield palette
 
     def get_dir_lights(self):
         colors = self.resources.get_dir_light_rgb()
         normals = self.resources.get_dir_light_norm()
         for color, normal in zip(colors, normals):
-            light = Directional_Light()
-            light.from_data(color, normal)
+            light = Directional_Light(color, normal)
             yield light
 
     def get_amb_light(self):
         color = self.resources.get_amb_light_rgb()
-        light = Ambient_Light()
-        light.from_data(color)
+        light = Ambient_Light(color)
         return light
 
     def get_background(self):
         background_data = self.resources.get_background()
-        background = Background()
-        background.from_data(background_data)
+        background = Background(background_data)
         return background
 
     def get_terrain(self):
         terrain_data = self.resources.get_terrain()
-        terrain = Terrain()
-        terrain.from_data(terrain_data)
+        terrain = Terrain(terrain_data)
         return terrain
 
     def get_gray_palettes(self):
         palettes = self.resources.get_gray_palettes()
         for palette_data in palettes:
-            palette = Palette()
-            palette.from_data(palette_data)
+            palette = Palette(palette_data)
             yield palette
